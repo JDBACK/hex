@@ -162,6 +162,25 @@ const NEMOTRON_3_5_ASR_RECORD: BenchmarkRecord = BenchmarkRecord {
     hardware: Some("Radeon 8060S (Vulkan)"),
 };
 
+/// transcribe.cpp's published FLEURS ru run for the Q8_0 file
+/// (handy-computer/gigaam-v3-e2e-rnnt-gguf's card): the full 775-utterance
+/// split, batch 1 and 8, greedy RNN-T, no timestamps. The card records no
+/// commit for the figure because it predates provenance; upstream's author
+/// package scores 6.78% only because it rejects 5 utterances past its 25 s
+/// limit, and on the 770 both decode, the two agree exactly.
+const GIGAAM_V3_E2E_RNNT_RECORD: BenchmarkRecord = BenchmarkRecord {
+    metric: ErrorMetric::Wer,
+    value: 5.35,
+    language: "ru",
+    dataset: Some("FLEURS test"),
+    source: Some("transcribe.cpp's published conversion benchmark"),
+    source_revision: None,
+    utterances: Some(775),
+    batch_size: None,
+    timestamps: Some(false),
+    hardware: None,
+};
+
 /// `model`'s benchmark record, or `None` when the system manages the model
 /// and publishes no figure (Apple Speech).
 pub fn benchmark(model: &ModelDefinition) -> Option<BenchmarkRecord> {
@@ -170,6 +189,7 @@ pub fn benchmark(model: &ModelDefinition) -> Option<BenchmarkRecord> {
         TranscriptionModelId::SenseVoiceSmall => Some(SENSEVOICE_RECORD),
         TranscriptionModelId::QwenCleoAsr17B => Some(QWENCLEO_RECORD),
         TranscriptionModelId::IvritWhisperLargeV3Turbo => Some(IVRIT_WHISPER_RECORD),
+        TranscriptionModelId::GigaAmV3E2eRnnt => Some(GIGAAM_V3_E2E_RNNT_RECORD),
         TranscriptionModelId::ParakeetUltra => Some(PARAKEET_ULTRA_RECORD),
         TranscriptionModelId::Nemotron35Asr => Some(NEMOTRON_3_5_ASR_RECORD),
         // The catalog's English figures: their dataset, source, and

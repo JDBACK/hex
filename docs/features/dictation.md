@@ -692,6 +692,11 @@ Model advertises streaming, GPU device             // dictate.streaming
   ├── he: ivrit.ai Whisper large-v3-turbo Recommended (Hebrew only, always with
   │   the `he` hint; 18.45% WER on FLEURS Hebrew test against stock turbo's
   │   29.69%, Hex's run), then Whisper turbo for Vocabulary (#752)
+  ├── ru: GigaAM v3 e2e RNN-T (Russian only, 5.35% WER on FLEURS ru, about
+  │   twice Parakeet v3's speed) is the third column of Russian's comparison,
+  │   unbadged: on 1 h 38 min of labelled Russian (Habr, October 2026) GigaAM
+  │   wins meetings and Parakeet dense IT speech, so Parakeet v3 keeps the
+  │   recommendation
   └── Every other available model follows without a badge, selectable and
       deletable; never auto-switched or auto-downloaded (setup.language-select)
 ```

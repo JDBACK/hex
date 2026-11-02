@@ -35,8 +35,9 @@ const DIGITS: usize = 16;
 const MAX_NAME_CHARS: usize = 64;
 
 /// The model families Hex's runtime handles, with the names people know.
-const ARCHITECTURES: [(&str, &str); 5] = [
+const ARCHITECTURES: [(&str, &str); 6] = [
     ("parakeet", "Parakeet"),
+    ("gigaam", "GigaAM"),
     ("whisper", "Whisper"),
     ("qwen3_asr", "Qwen3-ASR"),
     ("cohere_asr", "Cohere Transcribe"),
@@ -329,10 +330,11 @@ fn build(id: CustomModelId, manifest: &Manifest) -> &'static ModelDefinition {
         streams: false,
         runtime: ModelRuntime::Gguf(artifact),
         languages,
-        // Parakeet heads take no language prompt (Parakeet v3's catalog
-        // entry is the same); the other families do.
-        accepts_language_hint: architecture != "parakeet",
-        supports_language_detection: manifest.detects_language && architecture != "parakeet",
+        // Parakeet's and GigaAM's transducers take no language prompt
+        // (Parakeet v3's catalog entry is the same); the other families do.
+        accepts_language_hint: !matches!(architecture, "parakeet" | "gigaam"),
+        supports_language_detection: manifest.detects_language
+            && !matches!(architecture, "parakeet" | "gigaam"),
     }))
 }
 
@@ -493,8 +495,8 @@ fn profile(header: &GgufHeader, file_name: &str) -> Result<Profile> {
     };
     if !ARCHITECTURES.iter().any(|(name, _)| *name == architecture) {
         bail!(
-            "its architecture is {architecture}; Hex runs Parakeet, Whisper, Qwen3-ASR, \
-             Cohere Transcribe, and SenseVoice models"
+            "its architecture is {architecture}; Hex runs Parakeet, GigaAM, Whisper, \
+             Qwen3-ASR, Cohere Transcribe, and SenseVoice models"
         );
     }
     let Some(variant) = header.string("stt.variant") else {

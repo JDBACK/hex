@@ -803,6 +803,7 @@ const TRANSLATIONS: &[(&str, &str)] = &[
     ("Writes while you talk, so the text is ready when you let go", "Écrit pendant que vous parlez, le texte est prêt quand vous relâchez"),
     ("The fewest wrong words, in 14 languages. A big download", "Le moins de mots erronés, en 14 langues. Un gros téléchargement"),
     ("Almost any language, and it reads your vocabulary", "Presque toutes les langues, et il lit votre vocabulaire"),
+    ("Russian only, and about twice Parakeet v3's speed", "Russe uniquement, et environ deux fois plus rapide que Parakeet v3"),
     ("The English model before Parakeet Unified", "Le modèle anglais d'avant Parakeet Unified"),
     ("25 European languages, and it hears which one you speak", "25 langues européennes, et il entend laquelle vous parlez"),
     ("Parakeet v3, retrained for fewer wrong words", "Parakeet v3, réentraîné pour moins de mots erronés"),

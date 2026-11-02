@@ -234,6 +234,7 @@ pub(super) fn blurb(def: &ModelDefinition) -> &'static str {
         }
         M::CohereTranscribe => tr("The fewest wrong words, in 14 languages. A big download"),
         M::WhisperLargeV3Turbo => tr("Almost any language, and it reads your vocabulary"),
+        M::GigaAmV3E2eRnnt => tr("Russian only, and about twice Parakeet v3's speed"),
         M::ParakeetV2 => tr("The English model before Parakeet Unified"),
         M::ParakeetV3 => tr("25 European languages, and it hears which one you speak"),
         M::ParakeetUltra => tr("Parakeet v3, retrained for fewer wrong words"),

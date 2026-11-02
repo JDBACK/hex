@@ -156,6 +156,22 @@ pub(super) const NEMOTRON_3_5_ASR_ARTIFACT: GgufArtifact = GgufArtifact {
     architecture: "parakeet",
     variant: "nemotron-3.5-asr-streaming-0.6b",
 };
+// ai-sage's GigaAM-v3 e2e-RNN-T (MIT), a Russian-only Conformer transducer.
+// handy-computer converted ai-sage/GigaAM-v3 at ec1dc1f with transcribe.cpp's
+// GigaAM converter (its card validates the result against the author package
+// at 0fff13f8) and quantized the Q8_0 file, which carries the licence and
+// repository in its `general.*` metadata. GigaAM trains on 25 s utterances and
+// its runtime windows longer audio itself, reporting no audio limit
+// (`max_audio_ms` 0), so Hex never chunks it.
+pub(super) const GIGAAM_V3_E2E_RNNT_ARTIFACT: GgufArtifact = GgufArtifact {
+    filename: "gigaam-v3-e2e-rnnt-Q8_0.gguf",
+    revision: "3efd5b39882ceadca5570a8fb9fa1a2c801d6d6d",
+    repository: "handy-computer/gigaam-v3-e2e-rnnt-gguf",
+    bytes: 273_724_832,
+    sha256: "78d63b47723b7f8d78c6113a6ef983b5a86e2a86f6c273e1f5cb6967b1c4467a",
+    architecture: "gigaam",
+    variant: "gigaam-v3-e2e-rnnt",
+};
 /// The languages Nemotron 3.5 transcribes that Hex names, as the locales
 /// its language prompt takes (`runtime_language`). Its card also lists
 /// Norwegian Bokmål, which Hex doesn't offer yet.

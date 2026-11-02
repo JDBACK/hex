@@ -13,11 +13,12 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use super::artifacts::{
-    COHERE_ARTIFACT, COHERE_LANGUAGES, IVRIT_WHISPER_ARTIFACT, NEMOTRON_3_5_ASR_ARTIFACT,
-    NEMOTRON_3_5_LANGUAGES, NEMOTRON_3_5_LOCALES, PARAKEET_ULTRA_ARTIFACT,
-    PARAKEET_UNIFIED_ENGLISH_ARTIFACT, PARAKEET_V2_ARTIFACT, PARAKEET_V3_ARTIFACT,
-    PARAKEET_V3_LANGUAGES, QWEN_ARTIFACT, QWEN_LANGUAGES, QWENCLEO_ARTIFACT, SENSEVOICE_ARTIFACT,
-    UNDERDOG_BARK_3_CLEAN_ARTIFACT, UNDERDOG_BARK_3_PRO_ARTIFACT, WHISPER_ARTIFACT,
+    COHERE_ARTIFACT, COHERE_LANGUAGES, GIGAAM_V3_E2E_RNNT_ARTIFACT, IVRIT_WHISPER_ARTIFACT,
+    NEMOTRON_3_5_ASR_ARTIFACT, NEMOTRON_3_5_LANGUAGES, NEMOTRON_3_5_LOCALES,
+    PARAKEET_ULTRA_ARTIFACT, PARAKEET_UNIFIED_ENGLISH_ARTIFACT, PARAKEET_V2_ARTIFACT,
+    PARAKEET_V3_ARTIFACT, PARAKEET_V3_LANGUAGES, QWEN_ARTIFACT, QWEN_LANGUAGES, QWENCLEO_ARTIFACT,
+    SENSEVOICE_ARTIFACT, UNDERDOG_BARK_3_CLEAN_ARTIFACT, UNDERDOG_BARK_3_PRO_ARTIFACT,
+    WHISPER_ARTIFACT,
 };
 pub use super::custom_models::CustomModelId;
 pub use super::languages::{LANGUAGES, language_name};
@@ -38,6 +39,7 @@ pub enum TranscriptionModelId {
     Qwen3Asr06B,
     QwenCleoAsr17B,
     IvritWhisperLargeV3Turbo,
+    GigaAmV3E2eRnnt,
     SenseVoiceSmall,
     CohereTranscribe,
     UnderdogBark3Pro,
@@ -71,6 +73,7 @@ impl TranscriptionModelId {
             Self::Qwen3Asr06B => "qwen3_asr06_b",
             Self::QwenCleoAsr17B => "qwencleo_asr_1_7b",
             Self::IvritWhisperLargeV3Turbo => "ivrit_whisper_large_v3_turbo",
+            Self::GigaAmV3E2eRnnt => "gigaam_v3_e2e_rnnt",
             Self::SenseVoiceSmall => "sense_voice_small",
             Self::CohereTranscribe => "cohere_transcribe",
             Self::UnderdogBark3Pro => "underdog_bark_3_pro",
@@ -106,6 +109,7 @@ impl FromStr for TranscriptionModelId {
             "qwen3_asr06_b" => Ok(Self::Qwen3Asr06B),
             "qwencleo_asr_1_7b" => Ok(Self::QwenCleoAsr17B),
             "ivrit_whisper_large_v3_turbo" => Ok(Self::IvritWhisperLargeV3Turbo),
+            "gigaam_v3_e2e_rnnt" => Ok(Self::GigaAmV3E2eRnnt),
             "sense_voice_small" => Ok(Self::SenseVoiceSmall),
             "cohere_transcribe" => Ok(Self::CohereTranscribe),
             "underdog_bark_3_pro" => Ok(Self::UnderdogBark3Pro),
@@ -410,6 +414,27 @@ pub const MODELS: &[ModelDefinition] = &[
         languages: &["*"],
         accepts_language_hint: true,
         supports_language_detection: true,
+    },
+    // Before Qwen3-ASR so Russian's comparison — the first three models that
+    // support the saved language — shows it beside Parakeet v3 and Whisper.
+    ModelDefinition {
+        id: TranscriptionModelId::GigaAmV3E2eRnnt,
+        name: "GigaAM v3 e2e RNN-T",
+        // About twice Parakeet v3's ~33x: on the same Metal device Hex's
+        // harness ran 101x against v3's 51x (M4 Air), and transcribe.cpp's
+        // published M4 Max runs 360x against 182x.
+        realtime: "~65x",
+        // FLEURS ru in full (775 utterances), batch 1 and 8, greedy RNN-T,
+        // no timestamps: transcribe.cpp's published conversion figure.
+        word_error_rate: Some(5.35),
+        streams: false,
+        runtime: ModelRuntime::Gguf(&GIGAAM_V3_E2E_RNNT_ARTIFACT),
+        languages: &["ru"],
+        // A Russian-only transducer with no language input, like Parakeet
+        // v3. GigaAM's runtime windows audio past its 25 s training window and
+        // reports no audio limit (`max_audio_ms` 0), so Hex never chunks it.
+        accepts_language_hint: false,
+        supports_language_detection: false,
     },
     ModelDefinition {
         id: TranscriptionModelId::Qwen3Asr06B,
@@ -1392,6 +1417,45 @@ mod tests {
     }
 
     #[test]
+    fn russian_offers_gigaam_without_taking_parakeets_recommendation() {
+        use Recommendation::{Recommended, Vocabulary};
+        use TranscriptionModelId::{GigaAmV3E2eRnnt, ParakeetV3, WhisperLargeV3Turbo};
+        let russian: Vec<_> = choices_for_runtime("ru")
+            .into_iter()
+            .map(|choice| (choice.model.id, choice.recommendation))
+            .collect();
+        assert_eq!(
+            russian,
+            [(ParakeetV3, Recommended), (WhisperLargeV3Turbo, Vocabulary)]
+        );
+        let gigaam = definition(GigaAmV3E2eRnnt);
+        assert_eq!(gigaam.language_choices(), ["ru"]);
+        assert_eq!(gigaam.default_language(), "ru");
+        assert_eq!(gigaam.runtime_language_hint("ru"), None);
+        assert!(!gigaam.supports_language(AUTO_LANGUAGE));
+        assert!(!gigaam.streams);
+        assert!(!GigaAmV3E2eRnnt.is_labs_gated());
+        assert_eq!(gigaam.vocabulary_use(), VocabularyUse::None);
+        let record = benchmark(gigaam).unwrap();
+        assert_eq!(record.language, "ru");
+        assert_eq!(record.dataset, Some("FLEURS test"));
+        // It follows the recommendations without a badge, so switching to it
+        // never changes what Hex picks for Russian.
+        let picker: Vec<_> = picker_models("ru")
+            .into_iter()
+            .map(|(model, recommendation)| (model.id, recommendation))
+            .collect();
+        assert!(picker.contains(&(GigaAmV3E2eRnnt, None)));
+        assert_eq!(picker[0], (ParakeetV3, Some(Recommended)));
+        // It is Russian's third column: the first three models that support
+        // the language, which the picker compares side by side.
+        assert_eq!(
+            picker[..3].iter().map(|(id, _)| *id).collect::<Vec<_>>(),
+            [ParakeetV3, WhisperLargeV3Turbo, GigaAmV3E2eRnnt]
+        );
+    }
+
+    #[test]
     fn recommendations_are_language_specific() {
         let english = choices_for_runtime("en");
         assert_eq!(
@@ -1558,6 +1622,7 @@ mod tests {
                 TranscriptionModelId::IvritWhisperLargeV3Turbo,
                 "ivrit_whisper_large_v3_turbo",
             ),
+            (TranscriptionModelId::GigaAmV3E2eRnnt, "gigaam_v3_e2e_rnnt"),
             (TranscriptionModelId::SenseVoiceSmall, "sense_voice_small"),
             (TranscriptionModelId::CohereTranscribe, "cohere_transcribe"),
             (
